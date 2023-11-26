@@ -20,13 +20,16 @@ class AccessController {
                 msg: "Please fill Password",
             });
         }
-        try {
-            console.log("[P]:::[register]::: ", req.body);
-            const newShop = await AccessService.register(req.body);
-            return res.status(201).json(newShop);
-        } catch (error) {
-            next(error);
-        }
+
+        // try {
+        //     console.log("[P]:::[register]::: ", req.body);
+        //     const newShop = await AccessService.register(req.body);
+        //     return res.status(201).json(newShop);
+        // } catch (error) {
+        //     next(error);
+        // }
+        const newShop = await AccessService.register(req.body);
+        return res.status(201).json(newShop);
     }
 }
 

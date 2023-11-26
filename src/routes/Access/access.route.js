@@ -8,6 +8,9 @@ import CheckAuth from "../../Auth/CheckAuth.js";
 router.use(CheckAuth.apiKey);
 router.use(CheckAuth.premission("0000"));
 
-router.post("/shop/register", AccessController.register);
+router.post(
+    "/shop/register",
+    CheckAuth.asyncHandler(AccessController.register)
+);
 
 export default router;
