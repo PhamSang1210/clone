@@ -5,7 +5,9 @@ import shopModel from "../model/shop.model.js";
 import KeyTokenService from "./keyToken.service.js";
 import AuthUtilsJWT from "../Auth/AuthUtilsJWT.js";
 import { getInfoData } from "../utils/index.js";
-import { BadRequestError } from "../core/error.response.js";
+import { AuthFailure, BadRequestResponse } from "../core/error.response.js";
+import { OK } from "../core/success.response.js";
+import { findByEmail } from "./shop.service.js";
 
 const ROLE = {
     SHOP: "SHOP",
@@ -13,26 +15,60 @@ const ROLE = {
 };
 
 class AccessService {
+    static async logout() {}
+    static async login({ email, password, refreshToken = null }) {
+        //1.Check email in db
+        const foundShop = await findByEmail({ email });
+        if (!foundShop) throw BadRequestResponse("Shop not registerd !!!");
+        //match password
+        const matchPassword = await bcrypt.compare(
+            password,
+            foundShop.password
+        );
+
+        if (matchPassword === false) {
+            throw new AuthFailure("Authentication error !!!");
+        }
+        // 3.
+        //  - generate privateKey publicKey
+        const privateKey = crypto.randomBytes(64).toString("hex");
+        const publicKey = crypto.randomBytes(64).toString("hex");
+        //Variable
+        const { _id: userId } = foundShop;
+        // 4. Generate tokens
+        const tokens = AuthUtilsJWT.createTokenPair(
+            {
+                email,
+                id: userId,
+            },
+            publicKey,
+            privateKey
+        );
+        // deloy data -> Database
+        await KeyTokenService.createToken({
+            userId,
+            publicKey,
+            privateKey,
+            refreshToken: foundShop.refreshToken,
+        });
+
+        return {
+            shop: getInfoData(foundShop, ["id", "name", "email"]),
+            tokens,
+        };
+    }
+
     static async register({ name, email, password }) {
         // try {
         // Check exists
-        const holdShop = await shopModel.findOne({ name }).lean();
         const nameShop = await shopModel.exists({ name }).lean();
         const emailShop = await shopModel.exists({ email }).lean();
-        if (holdShop) {
-            throw new BadRequestError("Error:Shop already registered !!!!");
-        }
+
         if (nameShop) {
-            return {
-                code: 200,
-                msg: "Name exists !!!!!",
-            };
+            throw new OK({ message: "ERROR: Name exists !!!" });
         }
         if (emailShop) {
-            return {
-                code: 200,
-                msg: "Email exists !!!!!",
-            };
+            throw new BadRequestResponse("ERROR: Email exists !!!");
         }
 
         const salt = await genSalt(10);

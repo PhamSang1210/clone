@@ -1,35 +1,25 @@
+import { BadRequestResponse } from "../core/error.response.js";
+import { CREATED } from "../core/success.response.js";
+import { userValidate } from "../helpers/validation.js";
 import AccessService from "../services/access.service.js";
-import { StatusCodes } from "http-status-codes";
+import { SuccessResponse } from "../core/success.response.js";
 class AccessController {
+    static async login(req, res, next) {
+        return new SuccessResponse({
+            metaData: await AccessService.login(req.body),
+        }).send(res);
+    }
     static async register(req, res, next) {
-        if (!req.body.name) {
-            return res.status(StatusCodes.OK).json({
-                code: StatusCodes.OK,
-                msg: "Please fill Name",
-            });
-        }
-        if (!req.body.email) {
-            return res.status(StatusCodes.OK).json({
-                code: StatusCodes.OK,
-                msg: "Please fill email",
-            });
-        }
-        if (!req.body.password) {
-            return res.status(StatusCodes.OK).json({
-                code: StatusCodes.OK,
-                msg: "Please fill Password",
-            });
+        const { error } = userValidate(req.body);
+        if (error) {
+            const messageError = error.details[0].message;
+            throw new BadRequestResponse(messageError);
         }
 
-        // try {
-        //     console.log("[P]:::[register]::: ", req.body);
-        //     const newShop = await AccessService.register(req.body);
-        //     return res.status(201).json(newShop);
-        // } catch (error) {
-        //     next(error);
-        // }
-        const newShop = await AccessService.register(req.body);
-        return res.status(201).json(newShop);
+        new CREATED({
+            message: "Register OK",
+            metaData: await AccessService.register(req.body),
+        }).send(res);
     }
 }
 
